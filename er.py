@@ -15,6 +15,11 @@ import random
 import socket
 import sys
 
+#описание констант kleine Exmo
+BTC_ak=['K-']
+BTC_as=['S-']
+
+
 
 
 #Выставление уровней для торговли (коридор) для пары ETH/RUB
@@ -42,15 +47,14 @@ globalNr = nETH_RUB#
 
 
 # Выбирается первая(главная) пара > globalNr < 
-# Вторая пара выбирается автоматически, так что бы валюты не пересекались 
+# Вторая пара выбирается автоматически, так что бы валюты не пересекались
+# Вторая пара начинает работать только при наличии свободной валюты этой пары
 # 0. BTC/USD + (2. ETH/RUB)
 # 1. ETH/USD + (3. BTC/RUB)
 # 3. BTC/RUB + (1. ETH/USD)
 # 2. ETH/RUB + (0. BTC/USD)
 # 4. ETH/BTC ( )
 # 5. USD/RUB ()
-
-
 
 pairs=['btc_usd','eth_usd', 'btc_rub','eth_rub','eth_btc', 'usd_rub']
 
@@ -73,10 +77,16 @@ rubFree = 0
 
 # Валюта в резерве (в ордерах), пока не используется
 # TODO можно печатать, в какой зоне стоят ордера
-usdReserved=0 
-rubReserved=0 
-btcReserved=0 
-ethReserved=0 
+#usdReserved=0 
+#rubReserved=0 
+#btcReserved=0 
+#ethReserved=0 
+
+# Валюта в резерве и в ордерах 
+usdTotal=0 
+rubTotal=0 
+btcTotal=0 
+ethTotal=0 
 
 # Минимальные значения валют, необходисые для участия в сделках  
 am_min_BTC=0.0010001
@@ -260,7 +270,12 @@ def get_status(pairs_nr):
     global btcFree 
     global usdFree 
     global ethFree 
-    global rubFree 
+    global rubFree
+
+    global btcTotal
+    global usdTotal
+    global ethTotal
+    global rubTotal
 
     try:
         nonce = int(round(time.time()*1000))
@@ -315,14 +330,16 @@ def get_status(pairs_nr):
         ethReserved =   z['return']['res']['eth']
         rubReserved =   z['return']['res']['rub']
 
-        #print 'btcFree =', round(btcFree,6)
-        #print 'usdFree =', round (usdFree,2)
-        #print 'ethFree =', round(ethFree,6) 
-        #print 'rubFree =', round (rubFree,2) 
-# 0. BTC/USD + (3. ETH/RUB)
-# 1. ETH/USD + (2. BTC/RUB)
-# 2. BTC/RUB + (1. ETH/USD)
-# 3. ETH/RUB + (0. BTC/USD)
+        btcTotal = btcFree+btcReserved
+        usdTotal = usdFree+usdReserved
+        ethTotal = ethFree+ethReserved
+        rubTotal = rubFree+rubReserved
+
+        #print 'btcTotal =', round(btcTotal,6)
+        #print 'usdTotal =', round (usdTotal,2)
+        #print 'ethTotal =', round(ethTotal,6) 
+        #print 'rubTotal =', round (rubTotal,2) 
+
         if (pairs_nr==nBTC_USD or pairs_nr==nBTC_RUB):
            currency_A_Free = btcFree
            min_currency_A=am_min_BTC
@@ -331,12 +348,10 @@ def get_status(pairs_nr):
            currency_A_Free = ethFree
            min_currency_A=am_min_ETH
            #print 'ETC/',
-
         if (pairs_nr==nBTC_USD or pairs_nr==nETH_USD):
            currency_B_Free = usdFree
            min_currency_B= am_min_USD
            #print 'USD'
-
         elif (pairs_nr==nBTC_RUB or pairs_nr==nETH_RUB):
            currency_B_Free = rubFree
            min_currency_B= am_min_RUB 
@@ -723,7 +738,7 @@ def setBuy_Currency (pairs_nr):   #Валюту купить
            break 
         if (currency_B_Free < min_currency_B):
              break 
- 	  
+
         print '| price[',n,']=', price[n], m2
         if (price[n] > price_max ):
               price[n] = price_max
@@ -944,11 +959,22 @@ def check_corridor(i):
           result =0
     return result
 
+def ptintTotalCurency():
+    i=0
+    for p in pairs:
+       get_statistics(p,i)
+       #print 'i', i,p
+       i=i+1
+    print 'Currancy Total:', round (btcTotal, 4), 'BTC   ', round (usdTotal, 2), 'USD   ', round (ethTotal, 4), 'ETH   ', round(rubTotal,2), 'RUB'
+    return 0 
+
 def inc_checkCount(countPrint, pairs_nr):
     countPrint = countPrint +1
     if (countPrint==5):
          save_min_max_Price(pairs_nr)
-    if (countPrint==500):
+    if (countPrint==3):
+         ptintTotalCurency() 
+    if (countPrint==1000):
          countPrint=0
          run(pairs_nr)
     return countPrint
@@ -969,7 +995,7 @@ def bot():
       reset_con()
     countPrint =0
     print
-    print 'Bot bo is ready...'
+    print 'Bot is ready...'
     print
     pairs_nr = globalNr
     pairs_nr=run(pairs_nr)

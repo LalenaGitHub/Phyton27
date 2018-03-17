@@ -796,6 +796,20 @@ def checkMinMaxBTC(pairs_nr):
 
     return pairs_nr
 
+def calStartValues (pairs_nr):
+    global to_price 
+    global from_price 
+    global zone 
+    global diff_sell_buy
+    global startPreis
+    i=pairs_nr
+    startPreis[i] = getStartPrice(pairs[i], i)
+    diff_sell_buy[i] = min_diff*startPreis[i]
+    zone [i]= getZone(i) 
+    from_price[i] = startPreis[i] - diff_sell_buy[i]
+    to_price[i] = startPreis[i] + diff_sell_buy[i]
+    return 0
+
 # Инициализация, проверки и выставление ордеров на покупку и продажу
 def run (pairs_nr):
     global to_price 
@@ -803,6 +817,8 @@ def run (pairs_nr):
     global zone 
     global btcPrice
     global decimal_part
+    global diff_sell_buy
+    global startPreis
     print
     print '>> run', getStringPair(pairs_nr)
     
@@ -827,11 +843,9 @@ def run (pairs_nr):
        decimal_part =4
     i = pairs_nr
     get_statistics(pairs[i],i) 
-    startPreis[i] = getStartPrice(pairs[i], i)
-    diff_sell_buy[i] = min_diff*startPreis[i]
-    zone [i]= getZone(i) 
-    from_price[i]  = startPreis[i] - diff_sell_buy[i]
-    to_price[i] = startPreis[i] + diff_sell_buy[i]
+
+    calStartValues(i)
+
     print '|---------------------------------------------|' 
     print '| fromPrice : 1',m1, ' =', round (from_price[i], decimal_part), m2, '           ' 
     print '| toPrice   : 1',m1, ' =', round (to_price[i], decimal_part), m2, '           '
@@ -843,11 +857,9 @@ def run (pairs_nr):
     print '|---------------------------------------------|' 
 
     get_status(pairs_nr) 
-# Зона и рассчет цен
+#Зона и рассчет цен
     analysis_Pair(pairs_nr) 
-    min_currency_B= avg_AB[pairs_nr] * min_currency_A
-    print 'currency A: min=', round(min_currency_A, decimal_part), m1, 'free=', round(currency_A_Free, decimal_part), m1
-    print 'currency B: min=', round(min_currency_B, decimal_part), m2, 'free=', round(currency_B_Free, decimal_part), m2
+    printMinFreeCurrency(pairs_nr)
 #Покупка, если достаточно Фиата
     if (currency_B_Free >= min_currency_B):
         #Aктуальная цена ETH должна находиться в корридоре 
@@ -934,7 +946,7 @@ def checkFreeCurrency():
       printAllFreeCurrency()
       result =1
    return result
-
+#Сохранения последнего максимума и минимума актуальной пары, пока только для инфо
 def save_min_max_Price(pairs_nr):
     global saveZoneMax
     global saveZoneMin
@@ -942,6 +954,9 @@ def save_min_max_Price(pairs_nr):
     saveZoneMax[pairs_nr] = xPrice[4]# high
     return 0
 
+#Изменение пары в случаях достижения минимума или максимума значения БТС
+#Торговля в фиате в случае высоких цен БТС (вся крипта продана, начало продажи фиата с фиатом ) 
+#Торговля в крипте в случае нихких цен БТС ( крипта закуплена, начало продажи крипты с криптой ) 
 def checkPairsNr(pairs_nr):
     i=nBTC_USD
     get_statistics(pairs[i],i) 
@@ -949,6 +964,7 @@ def checkPairsNr(pairs_nr):
     nPairs_nr = checkMinMaxBTC(pairs_nr)
     return nPairs_nr
 
+#Проверка, находится ли актуальная цена БТС в корридоре, если режим проверки корридора выбран ((level_up>0) или (level_down>0)
 def check_corridor(i):
     result =1# обычный режим продажи (без кооридора)
     get_statistics(pairs[i],i) 
@@ -959,7 +975,7 @@ def check_corridor(i):
           result =0
     return result
 
-def ptintTotalCurency():
+def ptintTotalCurrency():
     i=0
     for p in pairs:
        get_statistics(p,i)
@@ -968,16 +984,43 @@ def ptintTotalCurency():
     print 'Currancy Total:', round (btcTotal, 4), 'BTC   ', round (usdTotal, 2), 'USD   ', round (ethTotal, 4), 'ETH   ', round(rubTotal,2), 'RUB'
     return 0 
 
+def printMinFreeCurrency(pairs_nr):
+    mm=getPairName(pairs_nr)
+    m1=mm[0] 
+    m2=mm[1]
+    m1=m1.upper()
+    m2=m2.upper() 
+    min_currency_B= avg_AB[pairs_nr] * min_currency_A
+    print 'currency A: min=', round(min_currency_A, decimal_part), m1, 'free=', round(currency_A_Free, decimal_part), m1
+    print 'currency B: min=', round(min_currency_B, decimal_part), m2, 'free=', round(currency_B_Free, decimal_part), m2
+    return 0
+
+#Увеличение счетчика + печать инфо и сохранение ммаксимумов и минимумов актуальной цены пары
 def inc_checkCount(countPrint, pairs_nr):
     countPrint = countPrint +1
     if (countPrint==5):
          save_min_max_Price(pairs_nr)
-    if (countPrint==3):
-         ptintTotalCurency() 
+    if (countPrint==50):
+         ptintTotalCurrency() 
     if (countPrint==1000):
          countPrint=0
          run(pairs_nr)
     return countPrint
+
+#Запрос всех данных 
+def read_data_API(pairs_nr):
+   #print 'get_depth:        OK'
+   #запросить стакан
+   depth=get_depth(pairs[pairs_nr],pairs_nr)
+   #print 'get_statistics:   OK' 
+   #Запросить статистику
+   get_statistics(pairs[pairs_nr], pairs_nr)
+   #print 'get_status:       OK'
+   #запросить остатки валют
+   balance=get_status(pairs_nr)
+   #print 'get_my_orders     OK' 
+   return 0
+
 ######################################################################################
 #                                                                                    #
 #                                                                                    #
@@ -988,8 +1031,7 @@ def inc_checkCount(countPrint, pairs_nr):
 def bot():
     global pairs
     global startUp
- 
-    # Одно соединение при старте
+     # Одно соединение при старте
     if (startUp==1):
       startUp =2
       reset_con()
@@ -1005,16 +1047,7 @@ def bot():
         try:
             #задержка чтоб не превысить лимит обращений по АПИ
             time.sleep(1.0)
-            #print 'get_depth:        OK'
-            #запросить стакан
-            depth=get_depth(pairs[pairs_nr],pairs_nr)
-            #print 'get_statistics:   OK' 
-            #Запросить статистику
-            get_statistics(pairs[pairs_nr], pairs_nr)
-            #print 'get_status:       OK'
-            #запросить остатки валют
-            balance=get_status(pairs_nr)
-            #print 'get_my_orders     OK' 
+            read_data_API (pairs_nr)
             #запросить мои ордера
             my_orders=get_my_orders()
             mm=getPairName(pairs_nr)
@@ -1023,59 +1056,73 @@ def bot():
             m1=m1.upper()
             m2=m2.upper() 
             if (checkFreeCurrency() < 1):
-                 #Смена валюты в зависимости от цена BTC; в режиме "коридора" не происходит
-                 #print '-',
+                 #Смена валюты в зависимости от цена BTC; в режиме "коридора" не происходит, к примеру btcPriceMin =9600 btcPriceMax =11999
+                 #Проверка курса BTC и смена пары при достижении максимума или минимума
                  pairs_nr=checkPairsNr(pairs_nr)
                  time.sleep(5.0)
+                 #Увеличение счетчика, обновление информация для вывода на экран, сохранения максимума/минимума актульной пары
                  countPrint=inc_checkCount(countPrint, pairs_nr)
                  print '.',
-            else: # свободная валюта
+            else: # свободная валюта обнаружена
                 print
-                #проверка актуальной валюты
+                #Пересчет  минимально возможной цены ордера в валюте А
                 min_currency_B= avg_AB[pairs_nr] * min_currency_A 
+                #проверка актуальной валюты
                 #print 'min_currency_A:', round(min_currency_A,decimal_part), m1
                 #print 'min_currency_B:', round(min_currency_B,decimal_part), m2
                 if (currency_B_Free >= min_currency_B) or (currency_A_Free >= min_currency_A):
                     print 
                     run(pairs_nr) 
-                elif (level_up<0) and (level_down<0):
-                    print 'change pairs_nr' , getStringPair(pairs_nr)
-                    print '5'
-                    #print 'Zone', getZone( pairs_nr)
-                    #смена пары Крипта/Крипта из за наличия фиата
-                    if (pairs_nr ==nETH_BTC) and (globalNr!=pairs_nr):
+                #Варинт работы без задания уровней  (нормальный режим)
+                elif (level_up < 0) and (level_down < 0):
+                    print 'change pairs_nr:' , getStringPair(pairs_nr)
+                    #Смена пары Крипта/Крипта из за наличия фиата
+                    #Выбирается "глобальная" пара globalNr
+                    if (pairs_nr == nETH_BTC) and (globalNr!=pairs_nr):
                         if (usdFree>am_min_USD):
-                           print 'change' , getStringPair(pairs_nr), 'to', getStringPair(globalNr), 'cause usdFree >',am_min_USD , 'USD'
-                           pairs_nr =nBTC_USD
+                           print 'change' , getStringPair(pairs_nr), 'to', getStringPair(globalNr), 'cause usdFree >', am_min_USD , 'USD'
+                           pairs_nr = nBTC_USD
                            run(pairs_nr) 
-                        if (rubFree>am_min_RUB):
-                           print 'change' , getStringPair(pairs_nr), 'to', getStringPair(globalNr), 'cause rubFree >',am_min_RUB , 'RUB'
-                           pairs_nr =nETH_RUB
+                        if (rubFree > am_min_RUB):
+                           print 'change' , getStringPair(pairs_nr), 'to', getStringPair(globalNr), 'cause rubFree >', am_min_RUB , 'RUB'
+                           pairs_nr = nETH_RUB
                            run(pairs_nr)
 
                     #смена пары Крипта/Фиат  на другую пару Крипта/Фиат из за наличия соотв. валюты
-                    if (globalNr ==nBTC_USD) and ((ethFree >am_min_ETH) or (rubFree>am_min_RUB)):
-                         print 'change' , getStringPair(pairs_nr), 'to', getStringPair(nETH_RUB), 'cause ethFree >',am_min_ETH , 'ETH or rubFree >',am_min_RUB , 'RUB'
+                    if (globalNr ==nBTC_USD):
                          pairs_nr =nETH_RUB
+                         print 'change' , getStringPair(globalNr), 'to', getStringPair(pairs_nr),
+                         if (ethFree > am_min_ETH):
+                             print  'cause ethFree >', am_min_ETH, 'ETH' 
+                         elif (rubFree > am_min_RUB):
+                             print 'cause rubFree >', am_min_RUB , 'RUB'
                          run(pairs_nr)
                     #смена пары Крипта/Фиат  на другую пару Крипта/Фиат из за наличия соотв. валюты
                     if (globalNr ==nETH_RUB):
-                         if(btcFree >am_min_BTC): 
-                             pairs_nr =nETH_BTC
-                             print 'change' , getStringPair(nETH_RUB), 'to', getStringPair(pairs_nr), 'cause btcFree >',am_min_BTC, 'BTC'
-                         if (usdFree>am_min_USD):
-                             pairs_nr =nETH_USD
-                             print 'change' , getStringPair(nETH_RUB), 'to', getStringPair(pairs_nr), 'cause usdFree >',am_min_USD , 'USD'
+                         pairs_nr =nETH_BTC
+                         print 'change' , getStringPair(globalNr), 'to', getStringPair(pairs_nr),
+                         if(btcFree > am_min_BTC): 
+                             print 'cause btcFree >', am_min_BTC, 'BTC'
+                         elif (usdFree > am_min_USD):
+                             print 'cause usdFree >', am_min_USD , 'USD'
                          run(pairs_nr)
                     #смена пары Крипта/Фиат  на другую пару Крипта/Фиат из за наличия соотв. валюты
-                    if (globalNr ==nBTC_RUB) and ((ethFree >am_min_ETH)or (usdFree>am_min_USD)):
-                         print 'change' , getStringPair(pairs_nr), 'to', getStringPair(nETH_USD), 'cause ethFree >',am_min_ETH , 'ETH or usdFree >',am_min_USD , 'USD'
-                         pairs_nr =nETH_USD
+                    if (globalNr == nBTC_RUB):
+                         pairs_nr = nETH_USD
+                         print 'change' , getStringPair(globalNr), 'to', getStringPair(pairs_nr), 
+                         if (ethFree > am_min_ETH):
+                             print 'cause ethFree >', am_min_ETH , 'ETH or usdFree >',am_min_USD , 'USD'
+                         elif (usdFree > am_min_USD):
+                             print 'cause usdFree >', am_min_USD , 'USD'
                          run(pairs_nr)
                     #смена пары Крипта/Фиат  на другую пару Крипта/Фиат из за наличия соотв. валюты
-                    if (globalNr ==nETH_USD) and ((btcFree >am_min_BTC)or (rubFree>am_min_RUB)):
-                         print 'change' , getStringPair(pairs_nr), 'to', getStringPair(nBTC_RUB), 'cause btcFree >',am_min_BTC , 'BTC or rubFree >',am_min_RUB , 'RUB'
+                    if (globalNr == nETH_USD):
                          pairs_nr =nBTC_RUB
+                         print 'change' , getStringPair(globalNr), 'to', getStringPair(pairs_nr),
+                         if (btcFree > am_min_BTC):
+                             print 'cause btcFree >', am_min_BTC , 'BTC'  
+                         elif(rubFree > am_min_RUB):
+                             print 'cause rubFree >', am_min_RUB , 'RUB'
                          run(pairs_nr)
                 continue 
         except:

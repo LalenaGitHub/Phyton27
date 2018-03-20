@@ -26,8 +26,8 @@ BTC_as=['S-faaa76ede0164eabc8eae3c85117425c69f18d6e']
 
 #Выставление уровней для торговли (коридор) для пары ETH/RUB
 #Вне коридора бот уходит в режим ожидания
-level_up = -1
-level_down = -1
+level_up = 8888
+level_down = 8300
 
 
 # Переход с продажи крипты с криптой (ETH/BTC) на крипта/фиат-валюта
@@ -44,7 +44,7 @@ nETH_RUB=3
 nETH_BTC=4
 nUSD_RUB=5
 ####################
-globalNr = nETH_USD#
+globalNr = nBTC_USD#
 ####################
 
 
@@ -670,15 +670,17 @@ def setSell_Currency (pairs_nr):
      price = [ ] # расчетные цена на продажу
      for i in range(max_11):
        price.append(0)
+     print '0'
      avg = avg_AB[pairs_nr]         # средняя величина стакана #TODO - можно брать среднюю цену за день
      diff_SB = avg*min_diff         # расчет разницы, абсолютная величина: средняя величина стакана на мин. разницу=5%
      cal_from_to_price(pairs_nr, avg, diff_SB)
      min_currency_B= avg_AB[pairs_nr] * min_currency_A # расчет минималького количества фиата для покупки минимального количество крипты по актуальной цене
+     print '1'
      printInfoSellBuy ( diff_SB, pairs_nr)
+     print '2'
      price_min = to_price[pairs_nr] # минимально возможная цена продажи равна последней цене продажи
      #Продажа на мин. разницу от цены покупки
      sell(price_min, pairs_nr, min_currency_A)
-     get_status(pairs_nr) #Обновление данный о свободных валютах
      if (currency_A_Free >= min_currency_A):
        #Продажа по различным зонам
        zoneCount = getZone(pairs_nr)
@@ -693,10 +695,10 @@ def setSell_Currency (pairs_nr):
           # крипта закончилась, выход
           if (currency_A_Free < min_currency_A):
             break
-       print '|                                                        |' 
-       print '| price[',n,']=', price[n], getStringPair(pairs_nr)
-       sell(price[n], pairs_nr, min_currency_A)
-       get_status(pairs_nr) #Обновление данный о свободных валютах
+          print '|                                                        |' 
+          print '| price[',n,']=', price[n], getStringPair(pairs_nr)
+          sell(price[n], pairs_nr, min_currency_A)
+
      return
 
 def sell(price, pairs_nr, min_currency_A):
@@ -721,7 +723,7 @@ def sell(price, pairs_nr, min_currency_A):
      print '|'
      print '| Sell by rate', round (price,decimal_part)  , m2,'/', m1, '   Quantity: ',  round (min_currency_A, decimal_part+2), m1 
      print '|________________________________________________________|'  
-
+     get_status(pairs_nr) #Обновление данный о свободных валютах
      return 0
 
 # Покупка
@@ -738,8 +740,6 @@ def setBuy_Currency (pairs_nr):   #Валюту купить
    price_max = from_price[pairs_nr]
    #купить по максимально возможной цене
    buy (price_max, pairs_nr, min_currency_A, min_currency_B)
-   get_status(pairs_nr)
-   #print '0', currency_B_Free,'>=', min_currency_B
    if (currency_B_Free >= min_currency_B):
     # покупка по различным зонам
      zoneCount = getZone(pairs_nr)
@@ -753,9 +753,8 @@ def setBuy_Currency (pairs_nr):   #Валюту купить
            break 
         if (currency_B_Free < min_currency_B):
              break 
-        print '| price[',n,']=', price[n], getStringPair(pairs_nr)
-        buy (price[n], pairs_nr, min_currency_A, min_currency_B)
-        get_status(pairs_nr)
+     print '| price[',n,']=', price[n], getStringPair(pairs_nr)
+     buy (price[n], pairs_nr, min_currency_A, min_currency_B)
    return
 
 def buy(price, pairs_nr, min_currency_A, min_currency_B):
@@ -778,6 +777,7 @@ def buy(price, pairs_nr, min_currency_A, min_currency_B):
    print '|'
    print '|  Buy by rate', round (price,decimal_part) , m2,'/', m1, '   Quantity: ',  round(0.999*min_currency_B/price, decimal_part), m1 
    print '|________________________________________________________|'  
+   get_status(pairs_nr)
    print
    return 0
 
@@ -1001,18 +1001,14 @@ def check_corridor( ):
     result =1# обычный режим продажи (без кооридора)
     i=globalNr
     get_statistics(pairs[i],i) 
-
+    ethPrice = getStartPrice(pairs[i], i)
     if (level_up>0) and (level_down>0):
-      if (globalNr==nETH_RUB) or (globalNr==nETH_USD):
-          ethPrice = getStartPrice(pairs[globalNr], globalNr)
-          if(ethPrice>level_up) or (ethPrice<level_down):
-            print 'ethPrice=',ethPrice, 'out of corridor ', time.sleep(10)
-            result =0
-      if (globalNr==nBTC_USD) or (globalNr==nBTC_RUB):
-          btcPrice = getStartPrice(pairs[globalNr], globalNr)
-          if (btcPrice>level_up) or (btcPrice<level_down):
-            print 'btcPrice=', btcPrice, 'out of corridor ', time.sleep(10)
-            result =0
+      if (globalNr==nETH_RUB) and ((ethPrice>level_up) or (ethPrice<level_down)):
+          print 'ethPrice=',ethPrice, 'out of corridor ', time.sleep(10)
+          result =0
+      if (globalNr==nBTC_USD) and ((btcPrice>level_up) or (btcPrice<level_down)):
+          print 'btcPrice=', btcPrice, 'out of corridor ', time.sleep(10)
+          result =0
  
     return result
 

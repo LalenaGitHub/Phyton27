@@ -15,13 +15,7 @@ import random
 import socket
 import sys
 
-#описание констант kleine Exmo
-#BTC_ak=['K-94220a18648ebd40f269cc68d5318bca79a366b4']
-#BTC_as=['S-af39d67290cb6e3cdad902a5b2aff5e2309bf2df']
 
-#описание констант
-BTC_ak=['K-bf180d37cc7a66a4781608acacf68583bf2a9ada']
-BTC_as=['S-faaa76ede0164eabc8eae3c85117425c69f18d6e']
 
 
 #Выставление уровней для торговли (коридор) для пары ETH/RUB
